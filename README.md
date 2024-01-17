@@ -1,12 +1,12 @@
 # BackEnd
 
 step 1:
-npm init
+>>>> npm init
 
 step2:
 insatall nodemon 
 command 
-npm i -D nodemon
+>>>>>>> npm i -D nodemon
 
 step3:
 prettier configuration
@@ -35,6 +35,11 @@ update env file with your database url
 and import mongoose dotenv and express packages
 commands
 
-npm i mongoose dotenv express
+>>>>>>> npm i mongoose dotenv express
 
 all three will be installed
+
+step 5:
+install cookie-parser and cors to maintain server request adn use some middleware
+
+>>>>>>> npm i cookie-parser cors
