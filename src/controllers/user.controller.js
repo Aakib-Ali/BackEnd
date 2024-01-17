@@ -78,7 +78,7 @@ const registerUser = asynchandler( async (req,res)=>{
 const loginUser = asynchandler (async (req,res)=>{
     const {userName, email,password} = req.body;
     //checking validation
-    if(!userName || !email){
+    if(!userName && !email){
         throw new ApiError(400,"email or password is required")
     }
     const user = await User.findOne({
