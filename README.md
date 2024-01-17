@@ -43,3 +43,13 @@ step 5:
 install cookie-parser and cors to maintain server request adn use some middleware
 
 >>>>>>> npm i cookie-parser cors
+
+step 6:
+install mongoose-aggregate-paginate for more user freindly
+
+>>>>>>npm i mongoose-aggregate-paginate-v2
+
+step 7:
+install jsonwebtoken(jwt) and bcrypt it's help to secure password generate salt hash value of pass word and cryptography using bcrypt
+
+>>>>>>>>npm i bcrypt jsonwebtoken
