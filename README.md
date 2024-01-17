@@ -53,3 +53,9 @@ step 7:
 install jsonwebtoken(jwt) and bcrypt it's help to secure password generate salt hash value of pass word and cryptography using bcrypt
 
 >>>>>>>>npm i bcrypt jsonwebtoken
+
+step 8:
+install cloudnary to upload files on third party cloudnary and store there with the help of multer and install it also
+
+>>>>>>>npm i multer
+>>>>>>>npm install cloudinary
