@@ -59,3 +59,5 @@ install cloudnary to upload files on third party cloudnary and store there with 
 
 >>>>>>>npm i multer
 >>>>>>>npm install cloudinary
+
+use multer to upload file on localstorage and use cloudinary to upload file on cloud
