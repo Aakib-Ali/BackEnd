@@ -341,6 +341,13 @@ const channel = asynchandler ( async (req,res)=>{
         }
     ])
 
+    if(!channel?.length){
+        throw new ApiError(404, "channel does not exist!!!!")
+    }
+    //console.log(channle);
+    return res.status(200)
+    .json(new ApiResponse(200, channel[0], "user channel fetched successfully!!!"))
+
 })
 
 
