@@ -6,7 +6,7 @@ const subscriptionSchema = new Schema(
             type: Schema.Types.ObjectId, //one who is subscribe
             ref: "User"
         },
-        chennel:{
+        channel:{
             type: Schema.Types.ObjectId, // onw whom to subsriber is subscribing
             ref: "User"
         }

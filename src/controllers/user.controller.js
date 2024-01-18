@@ -275,6 +275,74 @@ const updateCoverImage = asynchandler (async (req,res)=>{
     .json(new ApiResponse(200,user,"coverImage Updated success Fully" ))
 })
 
+const channel = asynchandler ( async (req,res)=>{
+    const {userName} = req.params
+    if(!userName?.trim()){
+        throw new ApiError(400, "username is missing")
+    }
+    
+    //pipelines
+    const channel = await User.aggregate([
+        {
+            //match user is exits and take data like forign key
+            $match:{
+                userName : userName?.toLowerCase()
+            }
+        },
+        {
+            //we are looking for subscribers for the channel throw channle
+            $lookup:{
+                form : "subcriptions",
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers"
+            }
+        },
+        {
+            //we are looking for the maine kise subscribe kar rkha he throw subscribrs
+            $lookup:{
+                form : "subcriptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribeTo"
+            }
+        },
+        {
+            //add fields into our user fiels 
+            $addFields:{
+                //count no of subcribers
+                subcsribersCount: {
+                    $size: "$subscribers"
+                },
+                //count how many i have subscribed
+                channerlsSubscredToCount:{
+                    $size: "$subscribeTo"
+                },
+                isSubscribed:{
+                    //here it is chaking that this profile use is my sbscriber or not
+                    $cond:{
+                        if: {$in: [req.user?._id, "$subscribers.subscriber"] },
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project:{
+                fullName:1,
+                email: 1,
+                userName:1,
+                subcsribersCount: 1,
+                channerlsSubscredToCount: 1,
+                coverImage :1,
+                avatar : 1
+            }
+        }
+    ])
+
+})
+
 
 export { registerUser,
     loginUser,
@@ -284,6 +352,6 @@ export { registerUser,
     getCurrentUser,
     updateDetails,
     updateAvatar,
-    updateCoverImage
-
+    updateCoverImage,
+    channel
 }
