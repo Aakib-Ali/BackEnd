@@ -189,8 +189,101 @@ const refreshAccessToken = asynchandler ( async (req,res)=>{
     
 })
 
+// changePassword
+const changePassword = asynchandler ( async (req,res)=>{
+    let {password , currentPassword}= req.body;
+    const user = findById(req.user._id);
+    const isCorrectPassword = user.isPasswordCorrect(currentPassword); 
+    if(!isCorrectPassword){
+        throw new ApiError(401, "CurrentPassword is not correct!!");
+    }
+    user.password=password;
+    await user.save({validateBeforeSave: false})
+
+    return res.status(200)
+    .json(200, {}, "Password change successfully!!");
+
+})
+
+const getCurrentUser= asynchandler ( async (req,res)=>{  //using auth middleware for req.user
+    return res.status(200)
+    .json(new ApiResponse(200,req.user,"Current user Fatched succefully"))
+})
+
+const updateDetails = asynchandler ( async (req,res)=>{
+    const {fullName ,email } = req.body;
+    if(!fullName || !email){
+        throw new ApiError(401, "All field are required")
+    }
+    const user = findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {email, fullName}
+        },{
+            new: true
+        }
+    ).select("-password")
+
+    return res.status(200)
+    .json( new ApiResponse(200, user,"Updated successfully"))
+})
+
+//Todo delete avatar before save new avatar and coverimage also
+const updateAvatar = asynchandler (async (req,res)=>{
+    const avatarLocalPath  = req.file?.path;
+    if(!avatarLocalPath){
+        throw new ApiError(401, "Avatar is missing")
+    }
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
+    if(!avatar.url){
+        throw new ApiError(501, " Avatar url is missing!!")
+    }
+    const user=await findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                avatar: avatar.url
+            }
+        },{
+            new : true
+        }
+    ).select("-password")
+    return res.status(200)
+    .json(new ApiResponse(200,user,"avatar Updated success Fully" ))
+})
+
+const updateCoverImage = asynchandler (async (req,res)=>{
+    const coverImageLocalPath  = req.file?.path;
+    if(!coverImageLocalPath){
+        throw new ApiError(401, "Cover image is missing")
+    }
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+    if(!coverImage.url){
+        throw new ApiError(501, " cover image url is missing!!")
+    }
+    const user=await findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                coverImage: coverImage.url
+            }
+        },{
+            new : true
+        }
+    ).select("-password")
+    return res.status(200)
+    .json(new ApiResponse(200,user,"coverImage Updated success Fully" ))
+})
+
+
 export { registerUser,
     loginUser,
     logoutUser,
-    refreshAccessToken
+    refreshAccessToken,
+    changePassword,
+    getCurrentUser,
+    updateDetails,
+    updateAvatar,
+    updateCoverImage
+
 }
