@@ -349,7 +349,59 @@ const channel = asynchandler ( async (req,res)=>{
     .json(new ApiResponse(200, channel[0], "user channel fetched successfully!!!"))
 
 })
-
+const watchHistory = asynchandler(async (req, res) => {
+    // Step 1: Match the user by their _id
+    const user = await User.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.user?._id)
+            }
+        },
+        // Step 2: Lookup the videos in the user's watchHistory
+        {
+            $lookup: {
+                from: "videos",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
+                    // Step 3: Lookup the owner of each video
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "id",
+                            as: "owner",
+                            pipeline: [
+                                // Step 4: Project only necessary fields for the owner
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        avatar: 1,
+                                        userName: 1
+                                    }
+                                },
+                                // Step 5: Add a new field 'owner' with the first element of the 'owner' array
+                                {
+                                    $addFields: {
+                                        owner: {
+                                            $first: "$owner"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    ]);
+    
+    return res.status(200)
+    .json(
+        new ApiResponse(200, owner[0].watchHistory, "Watch Histroy of user is fetched!!!")
+    )
+});
 
 export { registerUser,
     loginUser,
@@ -360,5 +412,6 @@ export { registerUser,
     updateDetails,
     updateAvatar,
     updateCoverImage,
-    channel
+    channel,
+    watchHistory
 }
