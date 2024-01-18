@@ -5,7 +5,7 @@ import uploadOnCloudinary from '../utils/cloudinary.js'
 import ApiResponse from '../utils/ApiResponse.js'
 import generateAccessAndrefreshToken from '../utils/GenerateTokens.js';
 import jwt from 'jsonwebtoken'
-
+import mongoose from 'mongoose';
 //register User
 const registerUser = asynchandler( async (req,res)=>{
     //get details from form
@@ -127,8 +127,8 @@ const logoutUser = asynchandler( async (req,res)=>{
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set :{
-                'refreshToken':null
+            $unset :{
+                refreshToken: 1 // unset use to delete token
             }
         },
         {
@@ -152,58 +152,73 @@ const logoutUser = asynchandler( async (req,res)=>{
 })
 
 //refreshToken after accessToken expire
-const refreshAccessToken = asynchandler ( async (req,res)=>{
+const refreshAccessToken = async (req, res) => {
     try {
-        const incomminRefreshToken = req.cookies.refreshToken || req.body.refreshToken
-        if(!incomminRefreshToken){
-            throw new ApiError(400, "Invelid Refresh Token")
+        const incomingRefreshToken = req.cookies?.refreshToken || req.body.refreshToken;
+
+        if (!incomingRefreshToken) {
+            throw new ApiError(400, "Invalid Refresh Token");
         }
-        const decodedToken = jwt.verify(incomminRefreshToken,process.env.REFRESH_TOKEN_SECRET);
-        const user = User.findById(decodedToken._id)
-        if(!user){
-            throw new  ApiError(401,"invalid Refresh Token")
+
+        const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+        const user = await User.findById(decodedToken._id);
+
+        if (!user) {
+            throw new ApiError(401, "Invalid Refresh Token");
         }
-        if(user?.refreshToken !== decodedToken){
-            throw new ApiError(401, "Refresh token is expired or used")
+
+        if (user.refreshToken !== incomingRefreshToken) {
+            throw new ApiError(401, "Refresh token is expired or used");
         }
-        //setting the accesstoken and sending it to the client side
-        const {accessToken,newrefreshToken} =await generateAccessAndrefreshToken(user?._id);
-        const options={
-            httpOnly :true,
-            secure : true
-        }
-    
-        return res.status(200)
-        .cookie("refreshToken", newrefreshToken,options)
-        .cookie("accessToken",accessToken, options)
-        .json(
-            200,
-            {
-                newrefreshToken, accessToken
-            },
-            "Access token refreshed!!!"
-        )
+
+        // Setting the access token and sending it to the client side
+        const { accessToken, newRefreshToken } = await generateAccessAndrefreshToken(user._id);
+        const options = {
+            httpOnly: true,
+            secure: true,
+        };
+
+        return res
+            .status(200)
+            .cookie("refreshToken", newRefreshToken, options)
+            .cookie("accessToken", accessToken, options)
+            .json({
+                newRefreshToken,
+                accessToken,
+                message: "Access token refreshed!!!",
+            });
     } catch (error) {
-        throw new ApiError(401, error?.message, "Refresh token is Invalid")
+        throw new ApiError(401, error.message || "Refresh token is invalid", "Refresh token is Invalid");
     }
-    
-})
+};
+
 
 // changePassword
-const changePassword = asynchandler ( async (req,res)=>{
-    let {password , currentPassword}= req.body;
-    const user = findById(req.user._id);
-    const isCorrectPassword = user.isPasswordCorrect(currentPassword); 
-    if(!isCorrectPassword){
-        throw new ApiError(401, "CurrentPassword is not correct!!");
+const changePassword = asynchandler(async (req, res) => {
+    try {
+        let { password, currentPassword } = req.body;
+        const user = await User.findById(req.user._id);
+
+        if (!user) {
+            throw new ApiError(404, "User not found");
+        }
+
+        const isPasswordValid = await user.isPasswordCorrect(currentPassword);
+
+        if (!isPasswordValid) {
+            throw new ApiError(401, "Current password is not correct!!");
+        }
+
+        user.password = password;
+        await user.save({ validateBeforeSave: false });
+
+        return res.status(200).json({
+            message: "Password changed successfully!!",
+        });
+    } catch (error) {
+        throw new ApiError(500, error.message || "Internal Server Error", "Failed to change password");
     }
-    user.password=password;
-    await user.save({validateBeforeSave: false})
-
-    return res.status(200)
-    .json(200, {}, "Password change successfully!!");
-
-})
+});
 
 const getCurrentUser= asynchandler ( async (req,res)=>{  //using auth middleware for req.user
     return res.status(200)
@@ -215,7 +230,7 @@ const updateDetails = asynchandler ( async (req,res)=>{
     if(!fullName || !email){
         throw new ApiError(401, "All field are required")
     }
-    const user = findByIdAndUpdate(
+    const user =await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set: {email, fullName}
@@ -238,7 +253,7 @@ const updateAvatar = asynchandler (async (req,res)=>{
     if(!avatar.url){
         throw new ApiError(501, " Avatar url is missing!!")
     }
-    const user=await findByIdAndUpdate(
+    const user=await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set:{
@@ -261,7 +276,7 @@ const updateCoverImage = asynchandler (async (req,res)=>{
     if(!coverImage.url){
         throw new ApiError(501, " cover image url is missing!!")
     }
-    const user=await findByIdAndUpdate(
+    const user=await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set:{
@@ -292,7 +307,7 @@ const channel = asynchandler ( async (req,res)=>{
         {
             //we are looking for subscribers for the channel throw channle
             $lookup:{
-                form : "subcriptions",
+                from : "subcriptions",
                 localField: "_id",
                 foreignField: "channel",
                 as: "subscribers"
@@ -301,7 +316,7 @@ const channel = asynchandler ( async (req,res)=>{
         {
             //we are looking for the maine kise subscribe kar rkha he throw subscribrs
             $lookup:{
-                form : "subcriptions",
+                from : "subcriptions",
                 localField: "_id",
                 foreignField: "subscriber",
                 as: "subscribeTo"
@@ -399,7 +414,7 @@ const watchHistory = asynchandler(async (req, res) => {
     
     return res.status(200)
     .json(
-        new ApiResponse(200, owner[0].watchHistory, "Watch Histroy of user is fetched!!!")
+        new ApiResponse(200, user[0].watchHistory, "Watch Histroy of user is fetched!!!")
     )
 });
 
